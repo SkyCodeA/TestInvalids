@@ -966,7 +966,7 @@
         // --- API KEY CONFIGURATION ---
         // PASTE YOUR GOOGLE AI API KEY HERE
         // Get your key from https://aistudio.google.com/app/apikey
-        const GOOGLE_API_KEY = "AIzaSyBoC-Rrrt51MDIUn4aoOvWZp5mv49Yta-E";
+        const GOOGLE_API_KEY = "YOUR_API_KEY_HERE";
 
         // Chart instances storage
         let statusChart = null;
@@ -1295,14 +1295,18 @@
             loadingIndicator.classList.remove('hidden');
             display.src = `https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...`; // Show generating placeholder
 
-            const apiKey = ""; 
+            if (!GOOGLE_API_KEY || GOOGLE_API_KEY === "YOUR_API_KEY_HERE") {
+                showModal('API Key Missing', 'Please add your Google AI API key to the GOOGLE_API_KEY variable in the script.', false);
+                loadingIndicator.classList.add('hidden');
+                display.src = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=API+Key+Missing`;
+                return;
+            }
+
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GOOGLE_API_KEY}`;
 
             const payload = { 
                 instances: [{ prompt: fullPrompt }], 
-                parameters: { 
-                    "sampleCount": 1
-                } 
+                parameters: { "sampleCount": 1 } 
             };
 
             try {
@@ -1312,24 +1316,41 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error("API Error Response:", errorBody);
+                    // Create a more specific error to be caught below
+                    throw new Error(`API returned status ${response.status}: ${errorBody.error?.message || 'Unknown API error'}`);
+                }
+
                 const result = await response.json();
                 const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
 
                 if (base64Data) {
                     const imageUrl = `data:image/png;base64,${base64Data}`;
                     display.src = imageUrl;
-                    // Cache the generated image URL
                     models[currentModel].url = imageUrl;
                 } else {
-                    // Handle error, use a clear error image or message
-                    display.src = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
-                    showModal('AI Image Error', `Could not generate the custom image. Please try a different prompt.`, false);
+                    console.warn("API response was successful but contained no image data.", result);
+                    throw new Error("API response did not contain valid image data.");
                 }
 
             } catch (error) {
-                console.error("Image generation failed:", error);
+                console.error("Full Image Generation Error:", error);
                 display.src = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
-                showModal('AI Image Error', `Network issue prevented image generation. Displaying a fallback placeholder.`, false);
+                
+                let detailedError = error.message;
+
+                // Make the error message more user-friendly for common issues
+                if (detailedError.includes("API key not valid")) {
+                    detailedError = "Your API key is not valid. Please check that it is correct and has no restrictions.";
+                } else if (detailedError.includes("Vertex AI API has not been used") || detailedError.includes("permission")) {
+                    detailedError = "Permission Denied. This usually means the 'Vertex AI API' has not been enabled for your project. Please go to your Google Cloud Console, find your project, and enable the 'Vertex AI API'. It may take a few minutes to activate.";
+                } else if (detailedError.includes("Billing account")) {
+                     detailedError = "Your project is not associated with a billing account. Please go to the Google Cloud Console and link a billing account to your project to enable this API.";
+                }
+
+                showModal('AI Image Error', detailedError, false);
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
@@ -2125,5 +2146,6 @@
     </script>
 </body>
 </html>
+
 
 
