@@ -963,6 +963,11 @@
         let userEmail = null; // User Email
         let currentAuthMode = 'login'; // 'login' or 'register'
         
+        // --- API KEY CONFIGURATION ---
+        // PASTE YOUR GOOGLE AI API KEY HERE
+        // Get your key from https://aistudio.google.com/app/apikey
+        const GOOGLE_API_KEY = "AIzaSyBoC-Rrrt51MDIUn4aoOvWZp5mv49Yta-E";
+
         // Chart instances storage
         let statusChart = null;
         let dateChart = null;
@@ -1170,7 +1175,7 @@
             const userQuery = `Garment: ${garment} (Quantity: ${quantity}). User's Idea/Notes: "${notes}". Generate 3 design concepts.`;
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1251,7 +1256,7 @@
             - Current Date: ${new Date().toLocaleDateString()}`;
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1291,7 +1296,7 @@
             display.src = `https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...`; // Show generating placeholder
 
             const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GOOGLE_API_KEY}`;
 
             const payload = { 
                 instances: [{ prompt: fullPrompt }], 
@@ -2076,7 +2081,7 @@
             };
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -2120,4 +2125,5 @@
     </script>
 </body>
 </html>
+
 
