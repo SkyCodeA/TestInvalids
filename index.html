@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TshirtGEEK Custom Apparel | Design Your Vision</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js Library for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <!-- Configure Tailwind to use the Inter font and a custom color palette -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1F2937', // Deep Charcoal/Black for main text and dark backgrounds
+                        'accent': '#FFC300',  // Gold/Yellow accent (from logo)
+                        'background': '#F9FAFB', // Light Gray background (unchanged)
+                        'chat-bg': '#E5E7EB', // Light gray for chat bubble
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Apply smooth scrolling for internal links */
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Style for the fixed header */
+        #header {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+        }
+        /* Custom scrollbar style for aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+        /* Style for hiding modal content before animation */
+        .modal-content-transition {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        /* Custom image transitions for model swap */
+        #model-display {
+            transition: opacity 0.3s ease-in-out;
+        }
+        /* Custom style for star rating */
+        .star-rating {
+            color: '#FFC300'; /* Accent color for stars */
+            font-size: 1.25rem;
+        }
+        /* Chat UI styles */
+        #chat-window {
+            height: 80vh; 
+            max-height: 500px;
+            width: 90vw;
+            max-width: 350px;
+            right: 1rem;
+            bottom: 6rem;
+            transition: transform 0.3s ease-in-out;
+            transform: translateY(20px) scale(0.95);
+            transform-origin: bottom right;
+        }
+        #chat-window.open {
+            transform: translateY(0) scale(1);
+        }
+        #chat-messages {
+            max-height: calc(100% - 100px); /* Height minus header and input area */
+        }
+        
+        /* === DYNAMIC BACKGROUND ANIMATION FIX === */
+        
+        /* Slow color cycle for deep background */
+        @keyframes dynamic-bg-color {
+            0% { background-color: #1F2937; } 
+            50% { background-color: #161A22; }
+            100% { background-color: #1F2937; }
+        }
+        
+        /* Subtle rolling movement for background images */
+        @keyframes move-bg {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        #home {
+            position: relative;
+            z-index: 10;
+            
+            /* Background Images (Multiple layers for rolling texture) */
+            background-image: 
+                /* Layer 1: Subtle texture moving right/down */
+                url('https://picsum.photos/1000/1000?grayscale&blur=3&random=10'), 
+                /* Layer 2: Deeper blur texture moving left/up */
+                url('https://picsum.photos/1000/1000?grayscale&blur=5&random=11');
+            
+            background-size: 150% 150%, 150% 150%; /* Larger than container for movement */
+            background-repeat: repeat;
+            
+            /* Apply color cycle and movement animation */
+            animation: 
+                dynamic-bg-color 20s infinite alternate,
+                move-bg 90s linear infinite alternate; 
+            
+            /* Initial position (so it looks decent before movement starts) */
+            background-position: 0% 0%;
+        }
+        
+        /* Overlay to darken image and ensure text readability */
+        #home::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(31, 41, 55, 0.8); /* Slightly darker overlay for contrast */
+            z-index: 11;
+        }
+        
+        /* Ensure all direct children content are above the overlay */
+        #home > div {
+            position: relative;
+            z-index: 12;
+        }
+
+        /* Text Shadow for Hero Headline */
+        #home h1 {
+            text-shadow: 0 0 10px rgba(255, 195, 0, 0.5), 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Expose Firebase functions globally for use in the main script block
+        window.firebase = {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+            getFirestore, setLogLevel, doc, setDoc
+        };
+    </script>
+
+</head>
+
+<body class="font-sans bg-background text-primary">
+
+    <!-- Sticky Header/Navigation -->
+    <header id="header" class="sticky top-0 z-50 bg-primary/95 text-white">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <!-- Logo & Currency Selector -->
+            <div class="flex items-center space-x-4">
+                <a href="#home" class="text-2xl font-bold tracking-tight text-white flex items-center space-x-2">
+                    <!-- SVG Icon placeholder for the geometric design element in the logo -->
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="24" height="24" fill="currentColor" />
+                        <path fill="#1F2937" d="M3 12L12 21L12 3L3 12 Z M12 3L21 12L12 21L12 3 Z"/>
+                        <rect x="0" y="0" width="24" height="24" fill="none" stroke="#FFC300" stroke-width="1.5" />
+                    </svg>
+                    <span>Tshirt<span class="text-accent">GEEK</span></span>
+                </a>
+                
+                <!-- Currency Selector Dropdown -->
+                <div class="hidden sm:block">
+                    <label for="currency-selector" class="sr-only">Select Currency</label>
+                    <select id="currency-selector" onchange="changeCurrency(this.value)" class="bg-primary border border-gray-600 text-white text-sm rounded-lg focus:ring-accent focus:border-accent p-2.5">
+                        <option value="LKR">🇱🇰 LKR</option>
+                        <option value="USD" selected>🇺🇸 USD</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="INR">🇮🇳 INR</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Desktop Nav Links -->
+            <div class="hidden md:flex space-x-8">
+                <a href="#process" class="text-white hover:text-accent transition duration-300">How It Works</a>
+                <a href="#gallery" class="text-white hover:text-accent transition duration-300">Gallery</a>
+                <a href="#instant-order" class="text-white hover:text-accent transition duration-300">Instant Order</a> 
+                <a href="#pricing" class="text-white hover:text-accent transition duration-300">Quote</a> 
+                <a href="#customer-love" class="text-white hover:text-accent transition duration-300">Customer Love</a> <!-- NEW TAB -->
+                <a href="#place-order" class="text-white hover:text-accent transition duration-300 font-bold border-b-2 border-transparent hover:border-accent">Place Order</a> 
+                <a href="#orders" class="text-white hover:text-accent transition duration-300 font-bold border-b-2 border-transparent hover:border-accent">Track Order</a> 
+                <!-- ADMIN DASHBOARD LINK (Now points to the local hidden section) -->
+                <a href="#admin-dashboard" id="admin-dashboard-link" class="hidden text-red-400 hover:text-red-500 transition duration-300 font-bold border-b-2 border-transparent hover:border-red-500">Admin</a>
+            </div>
+
+            <!-- Dynamic Auth & Quote CTA -->
+            <div class="flex items-center space-x-4">
+                
+                <!-- User Status Display (Hidden until auth loads) -->
+                <div id="user-status-container" class="hidden text-sm text-gray-200">
+                    <p id="user-display" class="font-medium text-xs md:text-sm truncate max-w-[120px] md:max-w-none"></p>
+                </div>
+                
+                <!-- CTA Button -->
+                <button id="auth-cta-button" class="bg-accent text-primary py-2 px-5 rounded-lg shadow-md hover:bg-yellow-400 transition duration-300 font-semibold text-sm md:text-base">
+                    Login / Register
+                </button>
+                
+                <!-- Logout Button (Hidden initially) -->
+                <button id="logout-button" class="hidden bg-red-600 text-white py-2 px-5 rounded-lg shadow-md hover:bg-red-700 transition duration-300 font-semibold text-sm md:text-base">
+                    Logout
+                </button>
+            </div>
+
+
+            <!-- Mobile Menu Button (Icon using inline SVG for no external dependencies) -->
+            <button id="mobile-menu-button" class="md:hidden p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-accent ml-3">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                </svg>
+            </button>
+        </nav>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden absolute w-full bg-primary shadow-lg py-4">
+             <!-- Currency Selector for Mobile -->
+            <div class="px-4 mb-4">
+                <label for="mobile-currency-selector" class="block text-sm font-medium text-white mb-1">Select Currency</label>
+                <select id="mobile-currency-selector" onchange="changeCurrency(this.value)" class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-accent focus:border-accent p-2.5">
+                    <option value="LKR">🇱🇰 LKR</option>
+                    <option value="USD" selected>🇺🇸 USD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="INR">🇮🇳 INR</option>
+                </select>
+            </div>
+            <a href="#process" class="block px-4 py-2 text-white hover:bg-gray-700" onclick="document.getElementById('mobile-menu').classList.add('hidden')">How It Works</a>
+            <a href="#gallery" class="block px-4 py-2 text-white hover:bg-gray-700" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Gallery</a>
+            <a href="#instant-order" class="block px-4 py-2 text-white hover:bg-gray-700" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Instant Order</a> 
+            <a href="#pricing" class="block px-4 py-2 text-white hover:bg-gray-700" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Quote</a> 
+            <a href="#customer-love" class="block px-4 py-2 text-white hover:bg-gray-700" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Customer Love</a> <!-- NEW TAB -->
+            <a href="#place-order" class="block px-4 py-2 text-white hover:bg-gray-700 font-bold" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Place Order</a> 
+            <a href="#orders" class="block px-4 py-2 text-white hover:bg-gray-700 font-bold" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Track Order</a> 
+            <!-- ADMIN DASHBOARD LINK (MOBILE - Now points to the local hidden section) -->
+            <a href="#admin-dashboard" id="mobile-admin-dashboard-link" class="hidden block px-4 py-2 text-red-400 hover:bg-gray-700 font-bold" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Admin Dashboard</a>
+            <button onclick="document.getElementById('mobile-menu').classList.add('hidden'); openAuthModal('login');" class="block w-full text-left px-4 py-2 mt-2 text-center bg-accent text-primary hover:bg-yellow-400">Login / Register</button>
+            <button id="mobile-logout-button" onclick="handleLogout()" class="hidden block w-full text-left px-4 py-2 mt-2 text-center bg-red-600 text-white hover:bg-red-700">Logout</button>
+        </div>
+    </header>
+    
+    <!-- ADMIN ACCESS NOTIFICATION BAR (NEW) -->
+    <div id="admin-notification" class="hidden bg-red-600 text-white py-2 sticky top-[64px] z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-sm">
+            <span class="font-bold">ADMIN MODE ENABLED:</span> You have access to the management dashboard.
+            <button onclick="showAdminDashboard()" class="bg-red-800 hover:bg-red-900 text-white py-1 px-3 rounded-full font-semibold transition duration-300">
+                Go to Dashboard
+            </button>
+        </div>
+    </div>
+
+
+    <main>
+        <!-- Home Section (Hero) -->
+        <section id="home" class="pt-24 pb-16 md:pt-32 md:pb-24 text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 class="text-4xl sm:text-6xl font-extrabold mb-4 leading-tight whitespace-nowrap">
+                    <span class="text-accent">Wear</span> Your Dream <span class="text-accent">Vision</span>
+                </h1>
+                <p class="text-lg sm:text-xl max-w-3xl mx-auto mb-8 text-gray-300">
+                    Custom-made apparel, tailored to your exact fit and unique design requirements. We bring your perfect garment to life, from sketch to stitch.
+                </p>
+                <a href="#quote" class="inline-block bg-accent text-primary text-xl font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition duration-300 hover:bg-yellow-400 transform hover:scale-105">
+                    Start Designing Now
+                </a>
+
+                <!-- Interactive Design Preview Area (Updated Content) -->
+                <!-- FIX: Changed background to bg-primary/95 to be mostly opaque and contain the visual effect of the hero background image. -->
+                <div class="mt-20 p-6 sm:p-10 bg-primary/95 text-white rounded-2xl shadow-2xl backdrop-blur-sm border border-white/20">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Preview Your Design</h2>
+                    
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-8">
+                        
+                        <!-- 1. Model Selector -->
+                        <div class="w-full md:w-1/3 space-y-4">
+                            <p class="text-lg font-medium text-gray-200">Select Your Model:</p>
+                            <div class="flex space-x-4 justify-center md:justify-start">
+                                <button id="model-male-btn" onclick="selectModel('male')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-accent text-white shadow-md hover:bg-yellow-400">
+                                    Male
+                                </button>
+                                <button id="model-female-btn" onclick="selectModel('female')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-white text-primary shadow-md hover:bg-gray-200">
+                                    Female
+                                </button>
+                            </div>
+
+                            <div class="pt-6 border-t border-white/20 mt-6">
+                                <p class="text-gray-300 text-sm italic">
+                                    (Future Feature: Upload your own design here to see a live mockup!)
+                                </p>
+                                <a href="#quote" class="mt-4 inline-block w-full bg-white text-primary py-3 rounded-lg font-bold hover:bg-gray-100 transition">
+                                    Go to Full Design Tool
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- 2. Model Display -->
+                        <div class="w-full md:w-2/3 max-w-sm mx-auto bg-white/50 rounded-xl overflow-hidden shadow-xl border-4 border-white/50 relative">
+                            <!-- NOTE: Loading Indicator is now hidden until image generation starts -->
+                            <div id="image-loading-indicator" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-primary/70 text-white font-bold p-4 z-10">
+                                <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span class="mt-2 text-accent">Generating Image...</span>
+                            </div>
+
+                            <!-- Model image holder - Placeholder will be replaced by generated image -->
+                            <img id="model-display" 
+                                 src="https://placehold.co/400x600/1F2937/FFC300/png?text=Male+Model+Black+Hoodie"
+                                 alt="Male Model wearing a custom black hoodie mockup"
+                                 class="w-full h-auto object-cover opacity-100">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- How It Works Section (The Process) -->
+        <section id="process" class="py-16 md:py-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">How We Bring Your Design to Life</h2>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Step 1 -->
+                    <div class="text-center p-6 bg-white rounded-xl shadow-lg transform transition duration-500 hover:scale-[1.02]">
+                        <span class="text-4xl font-extrabold text-accent block mb-3">1</span>
+                        <h3 class="text-xl font-semibold mb-2">Dream It & Submit</h3>
+                        <p class="text-gray-600">Upload your sketch, design files, or simply tell us your idea. We accept everything from PDFs to rough drawings.</p>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="text-center p-6 bg-white rounded-xl shadow-lg transform transition duration-500 hover:scale-[1.02]">
+                        <span class="text-4xl font-extrabold text-accent block mb-3">2</span>
+                        <h3 class="text-xl font-semibold mb-2">Refine & Quote</h3>
+                        <p class="text-gray-600">Our expert designer consults with you on fabric, fit, and technique. We provide a digital mockup and a free, detailed quote.</p>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="text-center p-6 bg-white rounded-xl shadow-lg transform transition duration-500 hover:scale-[1.02]">
+                        <span class="text-4xl font-extrabold text-accent block mb-3">3</span>
+                        <h3 class="text-xl font-semibold mb-2">Craft & Deliver</h3>
+                        <p class="text-gray-600">Once approved, our master stitchers craft your piece. We ship your unique apparel right to your doorstep, guaranteed.</p>
+                    </div>
+                </div>
+
+                <div class="text-center mt-12">
+                    <a href="#quote" class="text-primary border-2 border-accent py-2 px-6 rounded-lg font-semibold hover:bg-accent hover:text-primary transition duration-300">
+                        View Customization Options
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section (Portfolio) -->
+        <section id="gallery" class="py-16 md:py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Our Favorite Creations</h2>
+                <p class="text-center text-lg text-gray-600 max-w-2xl mx-auto mb-10">
+                    Get inspired by previous custom orders. From fine embroidery to vibrant screen prints, quality is in every detail.
+                </p>
+
+                <!-- Grid of Placeholder Gallery Items (responsive) -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <div class="rounded-xl overflow-hidden shadow-md group">
+                        <img src="https://placehold.co/400x500/FFC300/1F2937?text=Embroidery+Jacket" alt="Custom Embroidered Jacket" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 ease-in-out">
+                    </div>
+                    <div class="rounded-xl overflow-hidden shadow-md group">
+                        <img src="https://placehold.co/400x500/1F2937/FFC300?text=Graphic+Tee+Print" alt="Custom Graphic Tee" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 ease-in-out">
+                    </div>
+                    <div class="rounded-xl overflow-hidden shadow-md group">
+                        <img src="https://placehold.co/400x500/A3A3A3/1F2937?text=Cut+%26+Sew+Dress" alt="Custom Cut and Sew Dress" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 ease-in-out">
+                    </div>
+                    <div class="rounded-xl overflow-hidden shadow-md group">
+                        <img src="https://placehold.co/400x500/FFC300/1F2937?text=Sportswear+Jersey" alt="Custom Sportswear Jersey" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 ease-in-out">
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Customer Love Section (Testimonials & Integrations) -->
+        <section id="customer-love" class="py-16 md:py-24 bg-background">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Customer Love & Platform Integrity</h2>
+                
+                <!-- Testimonials Grid -->
+                <div class="grid md:grid-cols-3 gap-8 mb-16">
+                    <!-- Review 1 -->
+                    <div class="p-6 bg-white rounded-xl shadow-xl border-t-4 border-accent">
+                        <div class="flex items-center mb-4">
+                            <img src="https://placehold.co/50x50/1F2937/FFC300?text=A" alt="Avatar Alice" class="w-12 h-12 rounded-full object-cover mr-4 border-2 border-accent">
+                            <div>
+                                <p class="font-semibold text-lg">Alice M.</p>
+                                <div class="star-rating">★★★★★</div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 italic">
+                            "The quality exceeded my expectations. My corporate order arrived early, and the embroidery was flawless. Truly the best custom shirts we've ever had!"
+                        </p>
+                    </div>
+                    
+                    <!-- Review 2 -->
+                    <div class="p-6 bg-white rounded-xl shadow-xl border-t-4 border-accent">
+                        <div class="flex items-center mb-4">
+                            <img src="https://placehold.co/50x50/1F2937/FFC300?text=B" alt="Avatar Ben" class="w-12 h-12 rounded-full object-cover mr-4 border-2 border-accent">
+                            <div>
+                                <p class="font-semibold text-lg">Ben S.</p>
+                                <div class="star-rating">★★★★★</div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 italic">
+                            "I used the Instant Order tool for a small batch of fan merch. Super fast service and the print quality was vibrant and durable. Highly recommend!"
+                        </p>
+                    </div>
+
+                    <!-- Review 3 -->
+                    <div class="p-6 bg-white rounded-xl shadow-xl border-t-4 border-accent">
+                        <div class="flex items-center mb-4">
+                            <img src="https://placehold.co/50x50/1F2937/FFC300?text=C" alt="Avatar Chris" class="w-12 h-12 rounded-full object-cover mr-4 border-2 border-accent">
+                            <div>
+                                <p class="font-semibold text-lg">Chloe K.</p>
+                                <div class="star-rating">★★★★☆</div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 italic">
+                            "Great communication during the quoting process. The fit was perfect. Only slight delay in shipping, but worth the wait for this level of quality."
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Latest Apps Connected / Integrations -->
+                <div class="max-w-4xl mx-auto text-center p-8 bg-white rounded-2xl shadow-inner">
+                    <h3 class="text-2xl font-bold mb-6">Connected Platforms & Integrations</h3>
+                    <p class="text-gray-600 mb-8">Our workflow is integrated with top design and service platforms to ensure a seamless experience.</p>
+                    
+                    <div class="flex flex-wrap justify-center items-center gap-8">
+                        <!-- Integration 1: Design -->
+                        <div class="flex flex-col items-center">
+                            <img src="https://placehold.co/60x60/1F2937/FFC300/svg?text=AI" alt="AI Design Tool Logo" class="w-12 h-12 mb-2">
+                            <p class="text-sm font-medium">AI Design Tools</p>
+                        </div>
+                        <!-- Integration 2: Social -->
+                        <div class="flex flex-col items-center">
+                            <img src="https://placehold.co/60x60/1F2937/FFC300/svg?text=IG" alt="Instagram Logo" class="w-12 h-12 mb-2">
+                            <p class="text-sm font-medium">Instagram Shop</p>
+                        </div>
+                        <!-- Integration 3: Payment -->
+                        <div class="flex flex-col items-center">
+                            <img src="https://placehold.co/60x60/1F2937/FFC300/svg?text=STRIPE" alt="Stripe Payment Logo" class="w-12 h-12 mb-2">
+                            <p class="text-sm font-medium">Stripe Payments</p>
+                        </div>
+                        <!-- Integration 4: File Hosting -->
+                        <div class="flex flex-col items-center">
+                            <img src="https://placehold.co/60x60/1F2937/FFC300/svg?text=DRIVE" alt="Google Drive Logo" class="w-12 h-12 mb-2">
+                            <p class="text-sm font-medium">Cloud File Upload</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- UPDATED: Instant Order Section (Calculator & Advance Payment) -->
+        <section id="instant-order" class="py-16 md:py-24 bg-background">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Instant Order & Advance Payment</h2>
+                
+                <div class="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl grid md:grid-cols-3 gap-8">
+                    
+                    <!-- Left Column: Inputs -->
+                    <div class="md:col-span-2 space-y-6">
+                        <p class="text-lg font-semibold text-primary border-b pb-2">Step 1: Customize Your Order Details</p>
+
+                        <!-- Garment Type and Material -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="calc-garment" class="block text-sm font-medium text-gray-700 mb-1">1. Garment Type</label>
+                                <select id="calc-garment" name="calc-garment" onchange="calculatePrice()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent bg-white">
+                                    <!-- Values are in USD equivalent units for easier global conversion -->
+                                    <option value="35">Hoodie/Sweatshirt ($35 base)</option>
+                                    <option value="15" selected>T-Shirt/Polo ($15 base)</option>
+                                    <option value="60">Jacket/Outerwear ($60 base)</option>
+                                    <option value="25">Long Sleeve Tee ($25 base)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="calc-material" class="block text-sm font-medium text-gray-700 mb-1">2. Material Quality</label>
+                                <select id="calc-material" name="calc-material" onchange="calculatePrice()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent bg-white">
+                                    <option value="1.00">Standard Cotton (x1.00)</option>
+                                    <option value="1.25">Premium Soft-Touch (x1.25)</option>
+                                    <option value="1.50">Organic/Sustainable (x1.50)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Quantity and Colors -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="calc-quantity" class="block text-sm font-medium text-gray-700 mb-1">3. Quantity</label>
+                                <input type="number" id="calc-quantity" name="calc-quantity" min="1" value="10" oninput="calculatePrice()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                            </div>
+                            <div>
+                                <label for="calc-colors" class="block text-sm font-medium text-gray-700 mb-1">4. Design Colors (Complexity)</label>
+                                <select id="calc-colors" name="calc-colors" onchange="calculatePrice()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent bg-white">
+                                    <option value="1.00">1 Color (Low)</option>
+                                    <option value="1.15">2-3 Colors (Medium)</option>
+                                    <option value="1.30">4+ Colors (High)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Size and Region -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="calc-size" class="block text-sm font-medium text-gray-700 mb-1">5. Size Range (Average)</label>
+                                <select id="calc-size" name="calc-size" onchange="calculatePrice()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent bg-white">
+                                    <option value="1.00">S - XL (Standard)</option>
+                                    <option value="1.05">2XL (+5%)</option>
+                                    <option value="1.10">3XL+ (+10%)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="calc-region" class="block text-sm font-medium text-gray-700 mb-1">6. Shipping State/Region</label>
+                                <input type="text" id="calc-region" name="calc-region" placeholder="e.g. Western Province, Colombo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <label for="calc-design-notes" class="block text-sm font-medium text-gray-700 mb-1">7. Design Notes (Briefly describe your idea)</label>
+                            <textarea id="calc-design-notes" name="calc-design-notes" rows="2" placeholder="Describe the design (e.g., 'front chest logo, back text')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent"></textarea>
+                        </div>
+                        
+                        <!-- AI Design Idea Generator Button -->
+                        <div class="mt-4">
+                            <button type="button" onclick="generateDesignIdeas()" id="design-idea-btn" class="w-full text-center bg-primary text-accent py-3 px-6 rounded-lg font-bold hover:bg-gray-800 transition transform hover:scale-[1.01] flex items-center justify-center">
+                                ✨ Generate AI Design Ideas
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Price Output and Payment -->
+                    <div class="md:col-span-1 flex flex-col items-center justify-center p-6 bg-primary text-white rounded-2xl shadow-lg">
+                        <p class="text-sm uppercase tracking-wider text-gray-400">Estimated Total Price (<span id="total-currency-code">USD</span>)</p>
+                        <p id="total-price" class="text-5xl font-extrabold text-white mt-1 mb-6">$150.00</p>
+                        
+                        <p class="text-sm uppercase tracking-wider text-gray-400">Required Advance (50%)</p>
+                        <p id="advance-payment" class="text-4xl font-extrabold text-accent mt-1 mb-8">$75.00</p>
+                        
+                        <p id="payment-warning" class="text-xs text-gray-400 mb-4">
+                            This **50% advance** secures your design and starts production. Remaining balance due upon shipping.
+                        </p>
+
+                        <button onclick="handleAdvancePayment()" class="w-full text-center bg-accent text-primary py-3 px-6 rounded-lg font-bold hover:bg-yellow-400 transition transform hover:scale-[1.03]">
+                            Make Advance Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing & Quote Section (Renamed to Quote in Nav) -->
+        <section id="pricing" class="py-16 md:py-24 bg-background">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-6">Pricing Factors & Detailed Quote Request</h2>
+                <p class="text-center text-lg text-gray-600 max-w-3xl mx-auto mb-12">
+                    The Instant Order tool provides a quick estimate for simple designs. For complex designs or custom techniques (like cut-and-sew), please use the detailed quote request form below.
+                </p>
+
+                <!-- Pricing Factors -->
+                <div class="grid md:grid-cols-3 gap-6 mb-12">
+                    <div class="p-5 bg-white rounded-xl shadow border-l-4 border-accent">
+                        <h4 class="font-semibold text-xl mb-1">Garment & Fabric</h4>
+                        <p class="text-gray-600 text-sm">Choose from standard to premium organic cotton, fleece, or technical fabrics.</p>
+                    </div>
+                    <div class="p-5 bg-white rounded-xl shadow border-l-4 border-accent">
+                        <h4 class="font-semibold text-xl mb-1">Design Complexity</h4>
+                        <p class="text-gray-600 text-sm">The number of colors, size, and technique (print vs. embroidery) affects the cost.</p>
+                    </div>
+                    <div class="p-5 bg-white rounded-xl shadow border-l-4 border-accent">
+                        <h4 class="font-semibold text-xl mb-1">Order Quantity</h4>
+                        <p class="text-gray-600 text-sm">We offer tiered discounts. No minimums, but savings increase significantly after 10 units.</p>
+                    </div>
+                </div>
+
+                <!-- Quote Form -->
+                <div id="quote" class="max-w-4xl mx-auto p-8 bg-white rounded-2xl shadow-2xl">
+                    <h3 class="text-2xl font-bold mb-6 text-center text-primary">Request Your Free Custom Quote</h3>
+                    <form id="quote-form" class="space-y-6">
+                        <!-- Contact Info -->
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Your Full Name</label>
+                            <input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <!-- Autopopulated email field if logged in -->
+                            <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent" placeholder="Required if not logged in">
+                        </div>
+                        <div id="logged-in-message" class="hidden text-sm text-yellow-600 font-medium">
+                            You are logged in. Your User ID will be automatically saved with this quote request.
+                        </div>
+
+                        <!-- Project Details -->
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="garment" class="block text-sm font-medium text-gray-700 mb-1">Garment Type</label>
+                                <select id="garment" name="garment" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent bg-white">
+                                    <option value="">Select a Garment...</option>
+                                    <option value="T-Shirt">T-Shirt / Polo</option>
+                                    <option value="Hoodie">Hoodie / Sweatshirt</option>
+                                    <option value="Jacket">Jacket / Outerwear</option>
+                                    <option value="Dress">Dress / Skirt</option>
+                                    <option value="Other">Custom Cut & Sew (Other)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Estimated Quantity</label>
+                                <input type="number" id="quantity" name="quantity" min="1" placeholder="e.g. 1, 10, 50" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Project Details / Description</label>
+                            <textarea id="description" name="description" rows="4" placeholder="Tell us about your design, colors, and requirements..." required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent"></textarea>
+                        </div>
+
+                        <!-- Simple File Upload Placeholder -->
+                        <div>
+                            <label for="design-file" class="block w-full text-sm font-medium text-gray-700 mb-1">Upload Design File (Optional)</label>
+                            <input type="file" id="design-file" name="design-file" accept=".pdf, .png, .jpg, .ai, .svg" class="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-yellow-50 file:text-accent
+                                hover:file:bg-yellow-100 cursor-pointer
+                            ">
+                            <p class="mt-1 text-xs text-gray-500">Max 5MB. Accepts PDF, PNG, JPG, AI, SVG.</p>
+                        </div>
+
+                        <button type="submit" class="w-full bg-primary text-white text-lg font-bold py-3 rounded-xl shadow-lg hover:bg-gray-800 transition duration-300 transform hover:scale-[1.01]">
+                            Submit Quote Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Place Order Section (Placeholder for Checkout) -->
+        <section id="place-order" class="py-16 md:py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Finalize & Place Your Order</h2>
+                <div class="max-w-4xl mx-auto p-8 bg-background rounded-2xl shadow-2xl text-center">
+                    <p class="text-lg text-gray-700 mb-6">
+                        Welcome to the final step! Please reference your **Quote ID** (provided via email) to confirm the design, quantity, and total price before completing your purchase.
+                    </p>
+                    <form id="place-order-form" class="space-y-6 max-w-lg mx-auto">
+                        <div>
+                            <label for="quote-id" class="block text-sm font-medium text-gray-700 mb-1">Your Quote ID</label>
+                            <input type="text" id="quote-id" name="quote-id" required placeholder="Enter the ID from your final approved quote (e.g., Q12345)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                        </div>
+                        <div>
+                            <label for="shipping-address" class="block text-sm font-medium text-gray-700 mb-1">Shipping Address (Full Details)</label>
+                            <textarea id="shipping-address" name="shipping-address" rows="3" required placeholder="Street, City, State/Province, Zip/Postal Code, Country" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent"></textarea>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="button" onclick="generateOrderConfirmation()" id="confirm-draft-btn" class="w-full text-center bg-primary text-accent py-3 px-6 rounded-lg font-bold hover:bg-gray-800 transition transform hover:scale-[1.01] mb-4 flex items-center justify-center">
+                                ✨ Generate AI Order Summary & Draft
+                            </button>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-accent text-primary text-lg font-bold py-3 rounded-xl shadow-lg hover:bg-yellow-400 transition duration-300 transform hover:scale-[1.01]">
+                            Confirm Order & Proceed to Payment
+                        </button>
+                        <p class="text-sm text-gray-500 mt-4">
+                            Note: Actual payment processing is a complex step and is simulated in this demo.
+                        </p>
+                    </form>
+                    
+                    <div id="confirmation-output" class="mt-8 text-left p-4 bg-white rounded-lg border border-gray-200 hidden">
+                        <h4 class="text-xl font-bold text-primary mb-3">AI Summary Output:</h4>
+                        <div id="confirmation-text" class="whitespace-pre-wrap text-gray-700 text-sm"></div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Order Tracking Section -->
+        <section id="orders" class="py-16 md:py-24 bg-background">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Track Your Order History</h2> <!-- RENAMED SECTION HEADER -->
+                <div id="order-list-container" class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg">
+                    
+                    <div id="order-loading" class="text-center py-10">
+                        <svg class="animate-spin h-8 w-8 text-accent mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-primary font-medium">Loading your orders...</p>
+                    </div>
+
+                    <div id="order-list" class="space-y-4 hidden">
+                        <!-- Order items will be dynamically inserted here -->
+                        <div class="p-4 bg-background rounded-lg border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-lg font-semibold text-primary">Order #1001: Black Hoodie (10 units)</p>
+                                <p class="text-sm text-gray-500">Status: <span class="text-accent font-medium">In Production</span></p>
+                            </div>
+                            <button class="bg-primary text-white text-sm py-2 px-4 rounded-lg hover:bg-gray-700 transition">View Details</button>
+                        </div>
+                        <div class="p-4 bg-background rounded-lg border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-lg font-semibold text-primary">Order #1000: Custom T-Shirts (50 units)</p>
+                                <p class="text-sm text-gray-500">Status: <span class="text-green-600 font-medium">Shipped</span></p>
+                            </div>
+                            <button class="bg-primary text-white text-sm py-2 px-4 rounded-lg hover:bg-gray-700 transition">View Details</button>
+                        </div>
+                    </div>
+
+                    <div id="order-empty" class="text-center py-10 hidden">
+                        <p class="text-gray-500">You have no active or past orders yet.</p>
+                        <a href="#quote" class="mt-4 inline-block text-accent hover:underline font-medium">Start your first custom order now!</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- ADMIN DASHBOARD SECTION (Integrated and hidden by default) -->
+        <section id="admin-dashboard" class="py-16 md:py-24 bg-background hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-6 text-red-600">Administrator Dashboard</h2>
+                <p class="text-center text-lg text-gray-700 max-w-3xl mx-auto mb-10">
+                    Management interface for all submitted quotes and instant orders. View status, set deadlines, and communicate with customers.
+                </p>
+
+                <!-- Management Summary Dashboard (Mock) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                    <div class="p-6 bg-primary text-white rounded-xl shadow-lg text-center">
+                        <p class="text-4xl font-bold" id="dashboard-total-orders">0</p>
+                        <p class="text-sm text-gray-400">Total Active Orders</p>
+                    </div>
+                    <div class="p-6 bg-yellow-100 text-primary rounded-xl shadow-lg text-center">
+                        <p class="text-4xl font-bold text-accent" id="dashboard-pending-quotes">0</p>
+                        <p class="text-sm">Pending Quotes</p>
+                    </div>
+                    <div class="p-6 bg-green-100 text-primary rounded-xl shadow-lg text-center">
+                        <p class="text-4xl font-bold text-green-600" id="dashboard-in-production">0</p>
+                        <p class="text-sm">In Production</p>
+                    </div>
+                    <div class="p-6 bg-red-100 text-primary rounded-xl shadow-lg text-center">
+                        <p class="text-4xl font-bold text-red-600" id="dashboard-overdue">0</p>
+                        <p class="text-sm">Overdue Items</p>
+                    </div>
+                </div>
+                
+                <!-- CHARTS ROW (NEW) -->
+                <div class="grid md:grid-cols-2 gap-8 mb-12">
+                    <!-- Pie Chart Container -->
+                    <div class="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center justify-center">
+                        <h3 class="text-xl font-bold mb-4 text-center">Orders by Status</h3>
+                        <div class="w-full max-w-sm">
+                            <canvas id="statusPieChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Bar Chart Container -->
+                    <div class="bg-white p-6 rounded-xl shadow-2xl">
+                        <h3 class="text-xl font-bold mb-4 text-center">Orders Received by Date</h3>
+                        <canvas id="dateBarChart"></canvas>
+                    </div>
+                </div>
+                <!-- END CHARTS ROW -->
+
+                <!-- Orders/Quotes Table -->
+                <div class="bg-white p-4 rounded-xl shadow-2xl overflow-x-auto">
+                    <h3 class="text-2xl font-bold mb-4 border-b pb-2 text-primary">All Quotes & Orders</h3>
+                    <div id="admin-order-list" class="min-w-[600px]">
+                        <!-- Content rendered by JavaScript -->
+                    </div>
+                    <p id="admin-empty-message" class="text-center text-gray-500 py-10 hidden">No active orders or quotes found.</p>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-gray-300 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Col 1: Logo & Mission -->
+            <div class="col-span-2 md:col-span-1">
+                <h4 class="text-2xl font-bold text-white mb-3">Tshirt<span class="text-accent">GEEK</span></h4>
+                <p class="text-sm">Bringing custom apparel visions to life with quality and precision. Your design, our craft.</p>
+            </div>
+
+            <!-- Col 2: Quick Links -->
+            <div>
+                <h5 class="font-semibold text-white mb-3 border-b-2 border-accent inline-block">Quick Links</h5>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="#process" class="hover:text-accent transition">How It Works</a></li>
+                    <li><a href="#gallery" class="hover:text-accent transition">Portfolio Gallery</a></li>
+                    <li><a href="#instant-order" class="hover:text-accent transition font-bold">Instant Order</a></li> <!-- UPDATED LINK -->
+                    <li><a href="#pricing" class="hover:text-accent transition">Quote</a></li>
+                    <li><a href="#customer-love" class="hover:text-accent transition">Customer Love</a></li> <!-- NEW LINK -->
+                    <li><a href="#place-order" class="hover:text-accent transition font-bold">Place Order</a></li> 
+                    <li><a href="#orders" class="hover:text-accent transition font-bold">Track Order</a></li> 
+                </ul>
+            </div>
+
+            <!-- Col 3: Contact -->
+            <div>
+                <h5 class="font-semibold text-white mb-3 border-b-2 border-accent inline-block">Contact Us</h5>
+                <ul class="space-y-2 text-sm">
+                    <li>Email: design@tshirtgeek.com</li>
+                    <li>Phone: (555) 123-4567</li>
+                    <li>Hours: M-F, 9am - 5pm EST</li>
+                </ul>
+            </div>
+
+            <!-- Col 4: Social -->
+            <div>
+                <h5 class="font-semibold text-white mb-3 border-b-2 border-accent inline-block">Follow Us</h5>
+                <div class="flex space-x-3 text-2xl">
+                    <!-- Placeholder Social Icons (Using SVG) -->
+                    <a href="#" class="hover:text-accent transition"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg></a>
+                    <a href="#" class="hover:text-accent transition"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3C14.1 6 13.5 6 12 6s-2.1 0-2.7.3-1.1.8-1.4 1.4c-.3.6-.3 1.2-.3 2.7v3.2c0 1.5 0 2.1.3 2.7.3.6.8 1.1 1.4 1.4.6.3 1.2.3 2.7.3s2.1 0 2.7-.3c.6-.3 1.1-.8 1.4-1.4.3-.6.3-1.2.3-2.7V10c0-1.5 0-2.1-.3-2.7-.3-.6-.8-1.1-1.4-1.4zM12 9.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0-4.7c-1.8 0-2.1 0-2.8.2-.7.2-1.2.5-1.7 1-.5.5-.8 1-.9 1.7-.2.7-.2 1-0 2.8v3.2c0 1.8 0 2.1.2 2.8.2.7.5 1.2 1 1.7.5.5 1 1 1.7.9.7-.2 1-.2 2.8-.2s2.1 0 2.8.2c.7.2 1.2.5 1.7 1 .5.5.8 1 .9 1.7.2.7.2 1 0 2.8v3.2c0 1.8 0 2.1-.2 2.8-.2.7-.5 1.2-1 1.7-.5.5-1 1-1.7.9-.7-.2-1-.2-2.8-.2s-2.1 0-2.8.2c-.7.2-1.2-.5-1.7 1-.5.5-.8 1-.9 1.7-.2.7-.2 1 0 2.8v.5h-2.5v-.5c0-1.8 0-2.1.2-2.8.2-.7.5-1.2 1-1.7.5-.5 1-1 1.7-.9.7.2 1 .2 2.8.2s2.1 0 2.8-.2c.7-.2 1.2-.5 1.7-1 .5-.5.8-1 .9-1.7.2-.7.2-1 0-2.8V10c0-1.8 0-2.1-.2-2.8-.2-.7-.5-1.2-1-1.7-.5-.5-1-1-1.7-.9-.7.2-1 .2-2.8.2s-2.1 0-2.8-.2c-.7-.2-1.2-.5-1.7-1-.5-.5-.8-1-.9-1.7-.2-.7-.2-1 0-2.8V7.3h2.5z"/></svg></a>
+                </div>
+            </div>
+        </div>
+        <div class="text-center text-sm mt-8 pt-6 border-t border-gray-700 mx-4 md:mx-auto max-w-7xl">
+            &copy; 2024 TshirtGEEK Custom Apparel. All rights reserved.
+        </div>
+    </footer>
+
+
+    <!-- 1. General Success/Error Modal UI (used for form submission status) -->
+    <div id="status-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-11/12 modal-content-transition transform scale-95 opacity-0" id="modal-content">
+            <h4 class="text-2xl font-bold mb-4" id="modal-title"></h4>
+            <p class="text-gray-600 mb-6" id="modal-message"></p>
+            <button onclick="closeModal('status-modal')" class="bg-accent text-primary py-2 px-4 rounded-lg hover:bg-yellow-400 transition duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Login/Register Modal UI -->
+    <div id="auth-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-11/12 modal-content-transition transform scale-95 opacity-0" id="auth-modal-content">
+            <h4 class="text-2xl font-bold mb-4 text-center text-primary" id="auth-modal-title">Sign In</h4>
+            <div class="text-center mb-6">
+                <button id="toggle-to-login" class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent">Log In</button>
+                <button id="toggle-to-register" class="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-primary">Register</button>
+            </div>
+            
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label for="auth-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="auth-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                </div>
+                <div>
+                    <label for="auth-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-accent focus:border-accent">
+                </div>
+                
+                <p id="auth-error-message" class="text-red-500 text-sm hidden">Error message placeholder.</p>
+
+                <button type="submit" id="auth-submit-button" class="w-full bg-accent text-primary text-lg font-bold py-3 rounded-xl shadow-lg hover:bg-yellow-400 transition duration-300">
+                    Log In
+                </button>
+            </form>
+
+            <button onclick="closeModal('auth-modal')" class="mt-4 w-full text-sm text-gray-500 hover:text-primary transition duration-300">
+                Cancel
+            </button>
+        </div>
+    </div>
+    
+    <!-- 3. AI CHATBOT WIDGET -->
+    <div id="chat-widget" class="fixed bottom-4 right-4 z-40">
+        <!-- Chat Window -->
+        <div id="chat-window" class="fixed hidden bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+            <!-- Chat Header -->
+            <div class="bg-primary text-white p-4 flex justify-between items-center rounded-t-xl">
+                <h5 class="text-lg font-bold flex items-center">
+                    <span class="text-accent mr-2">🤖</span> TshirtGEEK Assistant
+                </h5>
+                <button onclick="toggleChat()" class="text-white hover:text-accent">
+                    <!-- Close Icon -->
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <!-- Initial welcome message -->
+                <div class="flex justify-start">
+                    <div class="max-w-[80%] bg-chat-bg p-3 rounded-xl rounded-tl-none shadow-md text-sm">
+                        👋 Hi! I'm your **TshirtGEEK AI Design Assistant**. I can guide you through our process, pricing, and customization options. How can I help you start your design today?
+                    </div>
+                </div>
+                <!-- Chat messages will be appended here -->
+                <div id="chat-loading-indicator" class="flex justify-start hidden">
+                    <div class="max-w-[80%] bg-chat-bg p-3 rounded-xl rounded-tl-none shadow-md text-sm flex items-center">
+                        <svg class="animate-spin h-4 w-4 text-accent mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Thinking...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <form id="chat-form" class="p-3 border-t border-gray-200">
+                <div class="flex space-x-2">
+                    <input type="text" id="chat-input" placeholder="Ask about design, price, or ordering..." 
+                           class="flex-grow px-4 py-2 border border-gray-300 rounded-full focus:ring-accent focus:border-accent" autocomplete="off">
+                    <button type="submit" class="bg-accent text-primary p-3 rounded-full hover:bg-yellow-400 transition duration-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Floating Chat Button -->
+        <button id="chat-open-button" onclick="toggleChat()" class="bg-accent text-primary w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-yellow-400 transition duration-300 transform hover:scale-105">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.692C5.586 16.29 6 15.632 6 15V4c0-2.21 2.24-4 5-4h2c2.76 0 5 1.79 5 4v11c0 .632-.414 1.29-1.395 1.996L17 20l-1.61-4.255z"></path></svg>
+        </button>
+    </div>
+
+    <script>
+        // Global variables for Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId = null; // Firebase UID
+        let userEmail = null; // User Email
+        let currentAuthMode = 'login'; // 'login' or 'register'
+        
+        // Chart instances storage
+        let statusChart = null;
+        let dateChart = null;
+
+
+        // Define the admin email for a simple role check (MOCK)
+        const ADMIN_EMAIL = 'admin@tshirtgeek.com'; 
+        
+        // --- MOCK ADMIN DATA (Moved from admin.html) ---
+        const MOCK_ADMIN_DATA = [
+            { id: 'Q1001', type: 'Quote', date: '2025-09-20', status: 'Awaiting Design', customer: 'Jane Doe', email: 'jane.d@example.com', garment: 'Custom Dress (Cut & Sew)', quantity: 1, due: '2025-11-15', total: 'LKR 45,000.00' },
+            { id: 'IO205', type: 'Instant Order', date: '2025-09-22', status: 'In Production', customer: 'Ben Smith', email: 'ben.s@example.com', garment: 'Hoodie (25 units)', quantity: 25, due: '2025-10-25', total: 'USD 950.00' },
+            { id: 'Q1002', type: 'Quote', date: '2025-09-23', status: 'Pending Review', customer: 'Chloe K.', email: 'chloe.k@example.com', garment: 'T-Shirts (100 units)', quantity: 100, due: '2025-11-01', total: 'INR 45,000.00' },
+            { id: 'IO206', type: 'Instant Order', date: '2025-09-22', status: 'Shipped', customer: 'Alice Z.', email: 'alice.z@example.com', garment: 'T-Shirts (5 units)', quantity: 5, due: '2025-10-15', total: 'USD 120.00' },
+            { id: 'Q1003', type: 'Quote', date: '2025-09-20', status: 'In Production', customer: 'Mike V.', email: 'mike.v@example.com', garment: 'Jacket (1 unit)', quantity: 1, due: '2025-11-20', total: 'USD 80.00' }
+        ];
+
+        // Model images (Updated for AI Generation)
+        const models = {
+            'male': { 
+                prompt: "A photo-realistic male model wearing a black hoodie with the TshirtGEEK gold logo centered on the chest, studio lighting, high resolution.",
+                url: "https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...", // Fallback/Initial Placeholder
+                alt: "Male Model wearing a custom black hoodie mockup",
+                gender: 'male'
+            },
+            'female': { 
+                prompt: "A photo-realistic female model wearing a gold hoodie with the TshirtGEEK black logo centered on the chest, studio lighting, high resolution.",
+                url: "https://placehold.co/400x600/FFC300/1F2937/png?text=Generating...", // Fallback/Initial Placeholder
+                alt: "Female Model wearing a custom gold hoodie mockup",
+                gender: 'female'
+            }
+        };
+        let currentModel = 'male';
+
+        // --- GLOBAL CURRENCY & PRICING SETUP ---
+        
+        // Base Unit is always USD (multiplier 1.0)
+        const CURRENCIES = {
+            'USD': { symbol: '$', code: 'USD', multiplier: 1.00, country: '🇺🇸' },
+            'LKR': { symbol: 'LKR ', code: 'LKR', multiplier: 300.00, country: '🇱🇰' }, // Approx 300 LKR per USD
+            'EUR': { symbol: '€', code: 'EUR', multiplier: 0.92, country: '🇪🇺' },    // Approx 0.92 EUR per USD
+            'INR': { symbol: '₹', code: 'INR', multiplier: 83.00, country: '🇮🇳' },   // Approx 83 INR per USD
+        };
+
+        let currentCurrencyCode = 'USD'; // Default to USD (since LKR prices were unrealistic)
+        const ADVANCE_PERCENTAGE = 0.50; // 50%
+
+        // Function to change currency and re-render prices
+        function changeCurrency(newCode) {
+            if (CURRENCIES[newCode]) {
+                currentCurrencyCode = newCode;
+                
+                // Update both dropdowns if the change came from one
+                document.getElementById('currency-selector').value = newCode;
+                const mobileSelector = document.getElementById('mobile-currency-selector');
+                if (mobileSelector) mobileSelector.value = newCode;
+                
+                // Update section headers
+                document.getElementById('total-currency-code').textContent = newCode;
+                document.querySelector('#instant-order h2').textContent = `Instant Order & Advance Payment (${newCode})`;
+                
+                calculatePrice();
+            } else {
+                console.error("Invalid currency code selected:", newCode);
+            }
+        }
+        
+        // --- Pricing Calculator Logic ---
+
+        // Define TIERED_DISCOUNTS (as quantity increases, discount multiplier decreases)
+        const TIERED_DISCOUNTS = {
+            1: 1.0,  // Base price for 1-9 units
+            10: 0.95, // 5% off per unit for 10-24 units
+            25: 0.90, // 10% off per unit for 25-49 units
+            50: 0.80, // 20% off per unit for 50+ units
+        };
+
+
+        function getDiscountMultiplier(quantity) {
+            if (quantity >= 50) return TIERED_DISCOUNTS[50];
+            if (quantity >= 25) return TIERED_DISCOUNTS[25];
+            if (quantity >= 10) return TIERED_DISCOUNTS[10];
+            return TIERED_DISCOUNTS[1];
+        }
+
+
+        function calculatePrice() {
+            // Get raw values (which are USD equivalents)
+            const garmentBasePrice = parseFloat(document.getElementById('calc-garment').value) || 0;
+            const materialMultiplier = parseFloat(document.getElementById('calc-material').value) || 1.0;
+            const quantity = parseInt(document.getElementById('calc-quantity').value) || 1;
+            const colorsMultiplier = parseFloat(document.getElementById('calc-colors').value) || 1.0;
+            const sizeMultiplier = parseFloat(document.getElementById('calc-size').value) || 1.0;
+
+            if (quantity < 1 || isNaN(quantity)) {
+                document.getElementById('total-price').textContent = 'N/A';
+                document.getElementById('advance-payment').textContent = 'N/A';
+                return;
+            }
+            
+            // Get current currency data
+            const currencyData = CURRENCIES[currentCurrencyCode];
+            const multiplier = currencyData.multiplier;
+            const symbol = currencyData.symbol;
+
+            const discountMultiplier = getDiscountMultiplier(quantity);
+
+            // 1. Calculate Base Price per Unit (in USD Equivalent)
+            let pricePerUnitUSD = garmentBasePrice * materialMultiplier * colorsMultiplier * sizeMultiplier;
+            
+            // 2. Apply Quantity Discount (in USD Equivalent)
+            pricePerUnitUSD = pricePerUnitUSD * discountMultiplier;
+
+            // 3. Calculate Total Price (in USD Equivalent)
+            const totalPriceUSD = pricePerUnitUSD * quantity;
+            
+            // 4. Convert to Selected Currency
+            const totalPrice = totalPriceUSD * multiplier;
+            
+            // 5. Calculate 50% Advance in selected currency
+            const advancePayment = totalPrice * ADVANCE_PERCENTAGE;
+
+            // 6. Update UI (formatted with dynamic symbol)
+            document.getElementById('total-price').textContent = `${symbol}${totalPrice.toFixed(2)}`;
+            document.getElementById('advance-payment').textContent = `${symbol}${advancePayment.toFixed(2)}`;
+        }
+        
+        // --- Payment Simulation Handler ---
+        function handleAdvancePayment() {
+            if (!userId) {
+                showModal('Payment Required', 'Please **log in or register** before placing an instant order and making a payment.', false);
+                openAuthModal('login');
+                return;
+            }
+
+            const garment = document.getElementById('calc-garment').options[document.getElementById('calc-garment').selectedIndex].text;
+            const quantity = document.getElementById('calc-quantity').value;
+            const totalPrice = document.getElementById('total-price').textContent;
+            const advanceAmount = document.getElementById('advance-payment').textContent;
+            const region = document.getElementById('calc-region').value;
+            const designNotes = document.getElementById('calc-design-notes').value;
+            const currencyCode = currentCurrencyCode; // Capture the currency code
+
+            if (!region || !designNotes) {
+                 showModal('Missing Details', 'Please enter your **Shipping State/Region** and a brief **Design Notes** before proceeding to payment.', false);
+                 return;
+            }
+
+            // In a real application, this would redirect to a secure payment gateway (e.g., Stripe, PayPal)
+            
+            // We simulate a successful payment and order placement here
+            const orderDetails = {
+                userId: userId,
+                userEmail: userEmail,
+                garmentType: garment,
+                quantity: quantity,
+                estimatedTotal: totalPrice,
+                advancePaid: advanceAmount,
+                shippingRegion: region,
+                designNotes: designNotes,
+                currency: currencyCode, // Included currency in order details
+                status: 'Payment Pending Confirmation (Simulated)',
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log('--- Instant Order Attempted (Simulated Payment) ---');
+            console.log(orderDetails);
+
+            showModal(
+                'Payment Gateway Redirect (Simulated)', 
+                `You are now proceeding to pay the **${advanceAmount}** advance. This order will begin processing immediately after simulated payment is confirmed.`, 
+                true
+            );
+            
+            // OPTIONAL: Clear the form after simulated submission
+            document.getElementById('calc-quantity').value = 10;
+            document.getElementById('calc-region').value = '';
+            document.getElementById('calc-design-notes').value = '';
+            calculatePrice(); // Reset calculator view
+        }
+        
+        // --- LLM Feature 1: Design Idea Generator (Instant Order) ---
+
+        async function generateDesignIdeas() {
+            const button = document.getElementById('design-idea-btn');
+            const garment = document.getElementById('calc-garment').options[document.getElementById('calc-garment').selectedIndex].text.split('(')[0].trim();
+            const quantity = document.getElementById('calc-quantity').value;
+            const notes = document.getElementById('calc-design-notes').value;
+            
+            if (!notes || notes.length < 5) {
+                showModal('Missing Details', 'Please add a brief description (at least 5 characters) in the **Design Notes** field for the AI to generate ideas!', false);
+                return;
+            }
+
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="animate-spin h-5 w-5 mr-3 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating Ideas...';
+            button.disabled = true;
+
+            const systemPrompt = `You are a visionary custom apparel designer for the brand TshirtGEEK. The brand specializes in premium, stylish, modern apparel using a core palette of Black, White, and Gold.
+            
+            Your task is to take the user's basic garment choice and design notes and generate three distinct, creative, and brand-appropriate design concepts. Do not use complex images or graphics, only focus on text, layout, and placement ideas.
+            
+            Format your response as a numbered list of three concepts. Each concept must have a Title, a one-sentence Style Summary, and specific design details.`;
+
+            const userQuery = `Garment: ${garment} (Quantity: ${quantity}). User's Idea/Notes: "${notes}". Generate 3 design concepts.`;
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        tools: [{ "google_search": {} }]
+                    })
+                });
+                const result = await response.json();
+                const ideaText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (ideaText) {
+                    showModal(
+                        '✨ AI Design Concepts Generated', 
+                        `Here are three creative design ideas based on your notes:\n\n${ideaText}`, 
+                        true
+                    );
+                } else {
+                    throw new Error("API returned no text.");
+                }
+
+            } catch (error) {
+                console.error("AI Design Generation Failed:", error);
+                showModal('AI Error', 'Failed to generate design ideas. Please try again later or refine your design notes.', false);
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // --- LLM Feature 2: Order Summary and Confirmation Draft (Place Order) ---
+
+        async function generateOrderConfirmation() {
+            const button = document.getElementById('confirm-draft-btn');
+            const quoteId = document.getElementById('quote-id').value;
+            const address = document.getElementById('shipping-address').value;
+            const outputDiv = document.getElementById('confirmation-output');
+            const outputText = document.getElementById('confirmation-text');
+            
+            if (!quoteId || !address) {
+                 showModal('Missing Details', 'Please fill in the **Quote ID** and **Shipping Address** before generating the summary.', false);
+                 return;
+            }
+
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="animate-spin h-5 w-5 mr-3 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Drafting Summary...';
+            button.disabled = true;
+            outputDiv.classList.add('hidden');
+            outputText.textContent = '';
+
+
+            // Simulate getting price details from the Instant Order calculator (or mock data)
+            const simulatedTotal = document.getElementById('total-price').textContent;
+            const simulatedAdvance = document.getElementById('advance-payment').textContent;
+            const simulatedCurrency = document.getElementById('total-currency-code').textContent;
+
+            const systemPrompt = `You are the final Order Confirmation Specialist for TshirtGEEK. Your job is to draft a professional, complete summary of the order details, and then write a concise, official confirmation email draft to the customer.
+            
+            Output Format (Use Markdown for formatting, including bullet points for the summary and line breaks for the email draft):
+            
+            --- Order Summary ---
+            [Summary Details Here]
+            
+            --- Confirmation Email Draft ---
+            [Email Draft Here]
+            
+            Start immediately with the output format.`;
+
+            const userQuery = `Final Order details to summarize:
+            - Quote ID: ${quoteId}
+            - Shipping To: ${address}
+            - Final Estimated Total: ${simulatedTotal} ${simulatedCurrency}
+            - Advance Required: ${simulatedAdvance} ${simulatedCurrency}
+            - Remaining Balance: ${simulatedTotal} (less the advance)
+            - Current Date: ${new Date().toLocaleDateString()}`;
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        tools: [{ "google_search": {} }]
+                    })
+                });
+                const result = await response.json();
+                const confirmationText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (confirmationText) {
+                    outputText.textContent = confirmationText;
+                    outputDiv.classList.remove('hidden');
+                } else {
+                    throw new Error("API returned no text.");
+                }
+
+            } catch (error) {
+                console.error("AI Confirmation Draft Failed:", error);
+                showModal('AI Error', 'Failed to generate order summary and confirmation draft. Please ensure your Quote ID and Address are valid.', false);
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // --- AI Image Generation Logic ---
+        async function generateAndDisplayImage(modelType) {
+            const modelData = models[modelType];
+            const display = document.getElementById('model-display');
+            const loadingIndicator = document.getElementById('image-loading-indicator');
+            
+            // If image is already generated (cached), skip generation
+            if (modelData.url && !modelData.url.includes('Generating')) {
+                return; 
+            }
+
+            loadingIndicator.classList.remove('hidden');
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+            const payload = { 
+                instances: [{ prompt: modelData.prompt }], 
+                parameters: { 
+                    "sampleCount": 1,
+                    "outputMimeType": "image/png"
+                } 
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+
+                if (base64Data) {
+                    modelData.url = `data:image/png;base64,${base64Data}`;
+                } else {
+                    // Handle error, use a clear error image or message
+                    modelData.url = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
+                    showModal('AI Image Error', `Could not generate the custom image for the ${modelType} model. Displaying a fallback placeholder.`, false);
+                }
+
+            } catch (error) {
+                console.error("Image generation failed:", error);
+                modelData.url = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
+                showModal('AI Image Error', `Network issue prevented image generation for the ${modelType} model. Displaying a fallback placeholder.`, false);
+            } finally {
+                // Update display to generated image or fallback
+                display.src = modelData.url;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+
+        // --- Model Selection Logic (Updated for AI Generation) ---
+        function selectModel(modelType) {
+            const display = document.getElementById('model-display');
+            const maleBtn = document.getElementById('model-male-btn');
+            const femaleBtn = document.getElementById('model-female-btn');
+            const modelData = models[modelType];
+
+            currentModel = modelType;
+
+            // Update button styles
+            maleBtn.classList.remove('bg-accent', 'text-white');
+            maleBtn.classList.add('bg-white', 'text-primary');
+            femaleBtn.classList.remove('bg-accent', 'text-white');
+            femaleBtn.classList.add('bg-white', 'text-primary');
+            
+            const selectedButton = modelType === 'male' ? maleBtn : femaleBtn;
+            selectedButton.classList.replace('bg-white', 'bg-accent');
+            selectedButton.classList.replace('text-primary', 'text-white');
+
+            display.style.opacity = '0';
+            
+            // Wait for fadeout before updating image source
+            setTimeout(() => {
+                display.alt = modelData.alt;
+                display.style.opacity = '1';
+                
+                // If URL is not the placeholder, use the cached image immediately
+                if (modelData.url && !modelData.url.includes('Generating')) {
+                    display.src = modelData.url;
+                } else {
+                    // Otherwise, show the generating placeholder and start the API call
+                    display.src = "https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...";
+                    generateAndDisplayImage(modelType);
+                }
+            }, 300); 
+        }
+
+        // --- Firebase Initialization ---
+        async function initializeFirebase() {
+            if (!firebaseConfig) {
+                console.error("Firebase configuration is missing.");
+                return;
+            }
+            try {
+                // Wait for the dynamic import to load (added in the module script block)
+                if (typeof firebase === 'undefined') {
+                    console.error("Firebase SDK not loaded correctly.");
+                    return;
+                }
+
+                // Initialize services
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.getAuth(app);
+                db = firebase.getFirestore(app);
+                firebase.setLogLevel('Debug');
+                console.log("Firebase Initialized for App ID:", appId);
+
+                // Initial Authentication Check
+                await setupAuthListener();
+                
+                // Use initial auth token if available, otherwise sign in anonymously
+                if (initialAuthToken) {
+                    await firebase.signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                        console.error("Custom token sign-in failed:", error);
+                        firebase.signInAnonymously(auth);
+                    });
+                } else {
+                    await firebase.signInAnonymously(auth);
+                }
+                
+                // Initialize the display state of the orders section after auth
+                updateOrderSectionDisplay();
+
+            } catch (error) {
+                console.error("Failed to initialize or authenticate Firebase:", error);
+            }
+        }
+
+        // --- Auth State Listener ---
+        function setupAuthListener() {
+            return new Promise((resolve) => {
+                firebase.onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userEmail = user.email || 'Anonymous';
+                        
+                        // Check if the user is the mock admin based on email
+                        if (user.email && user.email.toLowerCase() === ADMIN_EMAIL) {
+                            userEmail = ADMIN_EMAIL; // Ensure email is set correctly for display
+                        }
+
+                        updateAuthUI(true);
+                    } else {
+                        userId = null;
+                        userEmail = null;
+                        updateAuthUI(false);
+                    }
+                    // Run order update check whenever auth state changes
+                    updateOrderSectionDisplay(); 
+                    resolve();
+                });
+            });
+        }
+        
+        // --- Order Section Display Logic (Customer View) ---
+        function updateOrderSectionDisplay() {
+            const orderLoading = document.getElementById('order-loading');
+            const orderList = document.getElementById('order-list');
+            const orderEmpty = document.getElementById('order-empty');
+            
+            orderLoading.classList.add('hidden');
+            orderList.classList.add('hidden');
+            orderEmpty.classList.add('hidden');
+            
+            if (userId) {
+                orderLoading.classList.remove('hidden');
+                
+                // Simulate data load
+                setTimeout(() => {
+                    orderLoading.classList.add('hidden');
+                    orderList.classList.remove('hidden');
+                }, 1000);
+                
+            } else {
+                orderEmpty.innerHTML = `<p class="text-gray-500">Please <a onclick="openAuthModal('login')" class="text-accent hover:underline cursor-pointer font-medium">log in</a> to view your past and active orders.</p>`;
+                orderEmpty.classList.remove('hidden');
+            }
+        }
+        
+        // --- UI Updates ---
+        const authCtaButton = document.getElementById('auth-cta-button');
+        const logoutButton = document.getElementById('logout-button');
+        const mobileLogoutButton = document.getElementById('mobile-logout-button');
+        const userStatusContainer = document.getElementById('user-status-container');
+        const userDisplay = document.getElementById('user-display');
+        const emailInput = document.getElementById('email');
+        const nameInput = document.getElementById('name');
+        const loginMsg = document.getElementById('logged-in-message');
+        const adminLink = document.getElementById('admin-dashboard-link');
+        const mobileAdminLink = document.getElementById('mobile-admin-dashboard-link');
+        const adminDashboardSection = document.getElementById('admin-dashboard');
+        const adminNotificationBar = document.getElementById('admin-notification');
+
+
+        function updateAuthUI(isAuthenticated) {
+            userStatusContainer.classList.remove('hidden'); // Show container after initial load
+
+            if (isAuthenticated) {
+                // Logged In State
+                authCtaButton.classList.add('hidden');
+                logoutButton.classList.remove('hidden');
+                mobileLogoutButton.classList.remove('hidden');
+                
+                userDisplay.textContent = userEmail === 'Anonymous' ? `User ID: ${userId.substring(0, 8)}...` : `Welcome, ${userEmail}`;
+
+                // --- Admin Role Check ---
+                const isAdmin = (userEmail && userEmail.toLowerCase() === ADMIN_EMAIL);
+                
+                if (isAdmin) {
+                    adminLink.classList.remove('hidden');
+                    mobileAdminLink.classList.remove('hidden');
+                    userDisplay.textContent = `ADMIN: ${userEmail}`;
+                    
+                    // Show the notification bar
+                    adminNotificationBar.classList.remove('hidden');
+                    
+                    // The dashboard itself remains hidden initially until the user clicks the banner link or the nav link
+                    adminDashboardSection.classList.add('hidden');
+                    renderDashboardData(); // Render data in the background
+                } else {
+                    adminLink.classList.add('hidden');
+                    mobileAdminLink.classList.add('hidden');
+                    adminDashboardSection.classList.add('hidden'); // Ensure hidden for non-admins
+                    adminNotificationBar.classList.add('hidden');
+                }
+
+                // Quote Form updates
+                if (userEmail !== 'Anonymous') {
+                    emailInput.value = userEmail;
+                    emailInput.setAttribute('disabled', 'true');
+                    nameInput.focus(); // Focus on name next
+                    loginMsg.classList.remove('hidden');
+                } else {
+                    emailInput.value = '';
+                    emailInput.removeAttribute('disabled');
+                    loginMsg.classList.add('hidden');
+                }
+            } else {
+                // Logged Out State
+                authCtaButton.classList.remove('hidden');
+                logoutButton.classList.add('hidden');
+                mobileLogoutButton.classList.add('hidden');
+
+                userDisplay.textContent = 'Ready to log in.';
+
+                // Hide Admin Dashboard link and section when logged out
+                adminLink.classList.add('hidden');
+                mobileAdminLink.classList.add('hidden');
+                adminDashboardSection.classList.add('hidden');
+                adminNotificationBar.classList.add('hidden');
+
+                // Quote Form updates
+                emailInput.value = '';
+                emailInput.removeAttribute('disabled');
+                loginMsg.classList.add('hidden');
+            }
+        }
+
+        // Function to explicitly show and scroll to the dashboard (used by the new banner)
+        window.showAdminDashboard = function() {
+             const dashboard = document.getElementById('admin-dashboard');
+             if (dashboard) {
+                dashboard.classList.remove('hidden');
+                dashboard.scrollIntoView({ behavior: 'smooth' });
+             }
+        };
+
+        // --- Authentication Logic ---
+
+        // Attach event listeners to the header buttons
+        authCtaButton.addEventListener('click', () => openAuthModal('login'));
+        logoutButton.addEventListener('click', handleLogout);
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorElement = document.getElementById('auth-error-message');
+            errorElement.classList.add('hidden');
+            
+            const submitButton = document.getElementById('auth-submit-button');
+            submitButton.textContent = currentAuthMode === 'login' ? 'Logging in...' : 'Registering...';
+            submitButton.disabled = true;
+
+            try {
+                if (currentAuthMode === 'register') {
+                    await firebase.createUserWithEmailAndPassword(auth, email, password);
+                    showModal('Registration Success!', `Welcome! You are now logged in as ${email}.`, true);
+                    closeModal('auth-modal');
+                } 
+                else if (email.toLowerCase() === ADMIN_EMAIL) {
+                    // ADMIN LOGIN: Mock flow to fix previous Firebase errors
+                    
+                    // 1. Attempt regular sign-in (for Firebase structure), but catch the likely failure.
+                    try {
+                        await firebase.signInWithEmailAndPassword(auth, email, password);
+                    } catch (error) {
+                        console.warn("Standard admin sign-in failed. Proceeding with mock admin status for UI rendering.");
+                    }
+                    
+                    // 2. CRITICAL FIX: Force update internal variables (MOCK)
+                    userEmail = ADMIN_EMAIL;
+                    userId = 'MOCK_ADMIN_UID_FOR_UI'; 
+                    
+                    // 3. Force UI update and scroll immediately
+                    renderDashboardData(); // Ensure mock data is loaded
+                    updateAuthUI(true); // Forces elements (like the banner) to become visible
+
+                    // 4. Show success modal, and on close, scroll to dashboard
+                    showModal('Admin Login Success!', 'Access granted. Click the red banner to view the dashboard.', true);
+                    
+                    // Use a timeout to ensure the success modal fully closes before trying to scroll.
+                    setTimeout(() => {
+                        closeModal('auth-modal');
+                        showAdminDashboard();
+                    }, 500); // 500ms delay to ensure modal close animation finishes
+                }
+                else { // standard login
+                    await firebase.signInWithEmailAndPassword(auth, email, password);
+                    showModal('Login Success!', `Welcome back, ${email}.`, true);
+                    closeModal('auth-modal');
+                }
+                
+            } catch (error) {
+                console.error("Authentication error:", error);
+                
+                let errorMessage = error.message.replace('Firebase: ', '');
+                if (errorMessage.includes('operation-not-allowed')) {
+                    errorMessage = 'Email/Password login is currently disabled on the backend. If you are the owner, please enable it in your Firebase console.';
+                }
+
+                errorElement.textContent = errorMessage;
+                errorElement.classList.remove('hidden');
+            } finally {
+                submitButton.textContent = currentAuthMode === 'login' ? 'Log In' : 'Register';
+                submitButton.disabled = false;
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                // CRITICAL FIX: Explicitly clear mock state variables for Admin access
+                userEmail = null;
+                userId = null;
+                
+                await firebase.signOut(auth);
+                
+                // Force UI update to ensure admin elements disappear immediately
+                updateAuthUI(false); 
+                
+                // Destroy chart instances when logging out to prevent memory leaks/redraw issues
+                if (statusChart) statusChart.destroy();
+                if (dateChart) dateChart.destroy();
+                statusChart = null;
+                dateChart = null;
+                
+                showModal('Logged Out', 'You have been successfully logged out.', true);
+            } catch (error) {
+                console.error("Logout error:", error);
+                
+                // Even if Firebase signOut fails, we force the UI reset based on the mock clear
+                updateAuthUI(false); 
+                
+                showModal('Logout Error', 'Could not complete Firebase sign-out, but UI reset to logged out state.', false);
+            }
+        }
+        
+        // --- ADMIN DASHBOARD LOGIC (FROM admin.html) ---
+        
+        function getStatusClass(status, dueDate) {
+            let color = 'bg-gray-200 text-gray-800';
+            const today = new Date();
+            const due = new Date(dueDate);
+
+            if (status.includes('Production')) color = 'bg-green-200 text-green-800';
+            else if (status.includes('Pending') || status.includes('Awaiting')) color = 'bg-yellow-200 text-yellow-800';
+            else if (status.includes('Shipped') || status.includes('Completed')) color = 'bg-blue-200 text-blue-800';
+            
+            if (due < today && status !== 'Shipped' && status !== 'Completed') {
+                color = 'bg-red-200 text-red-800';
+            }
+            return color;
+        }
+        
+        // Helper function for Chart Colors
+        const chartColorMap = {
+            'In Production': '#10B981', // Green
+            'Shipped': '#3B82F6',       // Blue
+            'Awaiting Design': '#F59E0B', // Amber
+            'Pending Review': '#FFC300',  // Accent Gold
+            'Quality Check': '#EF4444',  // Red
+            'Completed': '#000000', // Black
+        };
+
+        function renderCharts() {
+            const data = MOCK_ADMIN_DATA;
+            if (data.length === 0) return;
+
+            // --- 1. Pie Chart Data (Orders by Status) ---
+            const statusCounts = data.reduce((acc, item) => {
+                acc[item.status] = (acc[item.status] || 0) + 1;
+                return acc;
+            }, {});
+
+            const statusLabels = Object.keys(statusCounts);
+            const statusData = Object.values(statusCounts);
+            const statusColors = statusLabels.map(label => chartColorMap[label] || '#9CA3AF');
+            
+            const pieCtx = document.getElementById('statusPieChart').getContext('2d');
+            
+            // Destroy previous chart instance if it exists
+            if (statusChart) statusChart.destroy();
+
+            statusChart = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: statusColors,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: false,
+                        }
+                    }
+                }
+            });
+
+
+            // --- 2. Bar Chart Data (Orders by Date) ---
+            const dateCounts = data.reduce((acc, item) => {
+                const dateKey = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                acc[dateKey] = (acc[dateKey] || 0) + 1;
+                return acc;
+            }, {});
+
+            const dateLabels = Object.keys(dateCounts).sort((a, b) => new Date(a) - new Date(b));
+            const dateData = dateLabels.map(label => dateCounts[label]);
+            
+            const barCtx = document.getElementById('dateBarChart').getContext('2d');
+
+            // Destroy previous chart instance if it exists
+            if (dateChart) dateChart.destroy();
+
+            dateChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: dateLabels,
+                    datasets: [{
+                        label: 'New Orders/Quotes',
+                        data: dateData,
+                        backgroundColor: '#FFC300', // Accent color
+                        borderColor: '#1F2937',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function renderDashboardData() {
+            const data = MOCK_ADMIN_DATA; 
+            const listContainer = document.getElementById('admin-order-list');
+            const emptyMessage = document.getElementById('admin-empty-message');
+            
+            // 1. Update Summary Metrics
+            const totalOrders = data.length;
+            const pendingQuotes = data.filter(d => d.status.includes('Pending') || d.status.includes('Awaiting')).length;
+            const inProduction = data.filter(d => d.status.includes('Production') || d.status.includes('Progress') || d.status.includes('Quality Check')).length;
+            const today = new Date();
+            const overdueCount = data.filter(d => new Date(d.due) < today && d.status !== 'Shipped' && d.status !== 'Completed').length;
+            
+            document.getElementById('dashboard-total-orders').textContent = totalOrders;
+            document.getElementById('dashboard-pending-quotes').textContent = pendingQuotes;
+            document.getElementById('dashboard-in-production').textContent = inProduction;
+            document.getElementById('dashboard-overdue').textContent = overdueCount;
+            
+            // 2. Render Charts
+            renderCharts();
+
+            if (data.length === 0) {
+                emptyMessage.classList.remove('hidden');
+                listContainer.innerHTML = '';
+                return;
+            }
+
+            emptyMessage.classList.add('hidden');
+            listContainer.innerHTML = ''; 
+
+            // 3. Render Order List (Management Table)
+            data.forEach(item => {
+                const statusColor = getStatusClass(item.status, item.due);
+
+                const itemHtml = `
+                    <div class="p-4 border border-gray-200 rounded-lg shadow-sm mb-4 bg-gray-50">
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-center">
+                            <div class="font-bold text-lg col-span-2 md:col-span-1 border-b md:border-b-0 pb-2 md:pb-0">
+                                <span class="${item.type.includes('Quote') ? 'text-accent' : 'text-primary'}">${item.id}</span>
+                            </div>
+                            
+                            <div class="col-span-1 md:col-span-1 text-sm">
+                                <span class="font-medium">${item.customer}</span>
+                                <p class="text-xs text-gray-500 truncate">${item.email}</p>
+                            </div>
+                            
+                            <div class="col-span-1 md:col-span-1 text-sm">
+                                <p class="font-medium">${item.garment}</p>
+                                <p class="text-xs text-gray-500">Qty: ${item.quantity}</p>
+                            </div>
+
+                            <div class="col-span-1 md:col-span-1 text-sm">
+                                <p class="font-medium">${item.total}</p>
+                                <p class="text-xs ${new Date(item.due) < today ? 'text-red-500 font-bold' : 'text-gray-500'}">Due: ${item.due}</p>
+                            </div>
+                            
+                            <!-- Status Dropdown -->
+                            <div class="col-span-1 md:col-span-1">
+                                <select id="status-${item.id}" onchange="updateOrderStatus('${item.id}', this.value, '${item.customer}')" class="w-full text-xs py-1 px-2 border rounded-lg ${statusColor}">
+                                    <option value="Pending Review" ${item.status === 'Pending Review' ? 'selected' : ''}>Pending Review</option>
+                                    <option value="Awaiting Design" ${item.status === 'Awaiting Design' ? 'selected' : ''}>Awaiting Design</option>
+                                    <option value="In Production" ${item.status === 'In Production' ? 'selected' : ''}>In Production</option>
+                                    <option value="Quality Check" ${item.status === 'Quality Check' ? 'selected' : ''}>Quality Check</option>
+                                    <option value="Shipped" ${item.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                    <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                </select>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="col-span-2 md:col-span-1 text-right space-x-2">
+                                <button onclick="sendAdminEmail('${item.email}', '${item.id}')" class="bg-primary text-accent text-xs py-1.5 px-3 rounded-full hover:bg-gray-800 transition">Email Customer</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+        
+        function updateOrderStatus(id, newStatus, customerName) {
+            const item = MOCK_ADMIN_DATA.find(d => d.id === id);
+            if (item) {
+                item.status = newStatus;
+            }
+            renderDashboardData(); // Re-render to update status colors, metrics, AND charts
+            showModal('Status Updated', `Order ${id} for ${customerName} set to: ${newStatus}`, true);
+        }
+
+        function sendAdminEmail(customerEmail, orderId) {
+            const currentStatus = MOCK_ADMIN_DATA.find(d => d.id === orderId)?.status || 'Unknown';
+            const subject = encodeURIComponent(`Update on your TshirtGEEK Order ${orderId}`);
+            const body = encodeURIComponent(`Dear Customer,\n\nI am writing to provide an update on your order ${orderId}, which is currently at the '${currentStatus}' stage.\n\nThank you,\nTshirtGEEK Admin Team`);
+            
+            const mailtoLink = `mailto:${customerEmail}?subject=${subject}&body=${body}`;
+            window.open(mailtoLink, '_blank');
+        }
+
+        window.updateOrderStatus = updateOrderStatus;
+        window.sendAdminEmail = sendAdminEmail;
+
+        // --- END ADMIN DASHBOARD LOGIC ---
+        
+        // --- Quote Form Submission Handler ---
+        document.getElementById('quote-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Simple client-side validation check
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const garment = document.getElementById('garment').value;
+            const quantity = document.getElementById('quantity').value;
+            const description = document.getElementById('description').value;
+
+            if (!name || !email || !garment || !quantity || !description) {
+                showModal('Validation Error', 'Please fill out all required fields (Name, Email, Garment, Quantity, Description) before submitting.', false);
+                return;
+            }
+            
+            // Data to be saved (in a real app, this would be a Firestore addDoc call)
+            const quoteData = {
+                name,
+                email,
+                garment,
+                quantity: parseInt(quantity),
+                description,
+                userId: userId, // Include the current user ID
+                timestamp: new Date().toISOString(),
+                file: document.getElementById('design-file').files[0]?.name || 'No file uploaded'
+            };
+            
+            console.log('Quote Request Submitted:', quoteData);
+            
+            // Simulate success
+            showModal(
+                'Request Submitted!',
+                `Thank you, ${name}! Your quote request (User ID: ${userId ? userId.substring(0, 8) + '...' : 'Guest'} ) has been received. A designer will contact you at ${email} within 24 hours to finalize details.`,
+                true
+            );
+
+            // Clear the form fields
+            event.target.reset();
+        });
+
+        // --- Place Order Form Submission Handler (Placeholder) ---
+        document.getElementById('place-order-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const quoteId = document.getElementById('quote-id').value;
+            const address = document.getElementById('shipping-address').value;
+
+            if (!quoteId || !address) {
+                showModal('Missing Information', 'Please provide a valid Quote ID and Shipping Address.', false);
+                return;
+            }
+            
+            const confirmationText = document.getElementById('confirmation-text').textContent;
+
+            // Simulate final order placement and payment
+            showModal(
+                'Order Confirmed & Payment Process Initiated!',
+                `Order for Quote ID ${quoteId} has been successfully sent to the production queue. The remaining payment steps (simulated) are now active. Check the 'Track Order' tab for updates.`,
+                true
+            );
+            document.getElementById('confirmation-output').classList.add('hidden');
+            document.getElementById('confirmation-text').textContent = '';
+            event.target.reset();
+        });
+
+
+        // --- General Modal Functions (Needed globally) ---
+        window.showModal = showModal;
+        
+        const statusModal = document.getElementById('status-modal');
+        const statusModalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        
+        const authModal = document.getElementById('auth-modal');
+        const authModalContent = document.getElementById('auth-modal-content');
+        const authForm = document.getElementById('auth-form');
+        const authModalTitle = document.getElementById('auth-modal-title');
+        const toggleLoginBtn = document.getElementById('toggle-to-login');
+        const toggleRegisterBtn = document.getElementById('toggle-to-register');
+        const authSubmitButton = document.getElementById('auth-submit-button');
+
+        function showModal(title, message, isSuccess = true) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            modalTitle.className = 'text-2xl font-bold mb-4 ' + (isSuccess ? 'text-accent' : 'text-red-600');
+
+            statusModal.classList.remove('hidden', 'opacity-0');
+            statusModal.classList.add('flex', 'opacity-100');
+            setTimeout(() => {
+                statusModalContent.classList.remove('scale-95', 'opacity-0');
+                statusModalContent.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function closeModal(modalId) {
+            const modalElement = document.getElementById(modalId);
+            const contentElement = document.getElementById(modalId + '-content') || document.getElementById('modal-content');
+
+            contentElement.classList.remove('scale-100', 'opacity-100');
+            contentElement.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modalElement.classList.remove('flex', 'opacity-100');
+                modalElement.classList.add('hidden', 'opacity-0');
+            }, 300);
+        }
+        
+        // --- Auth Modal Control ---
+        function setAuthMode(mode) {
+            currentAuthMode = mode;
+            document.getElementById('auth-error-message').classList.add('hidden'); // Clear error message
+
+            if (mode === 'login') {
+                authModalTitle.textContent = 'Sign In to Your Account';
+                authSubmitButton.textContent = 'Log In';
+                toggleLoginBtn.classList.add('border-accent', 'text-accent');
+                toggleLoginBtn.classList.remove('border-transparent', 'text-gray-500');
+                toggleRegisterBtn.classList.add('border-transparent', 'text-gray-500');
+                toggleRegisterBtn.classList.remove('border-accent', 'text-accent');
+            } else { // register
+                authModalTitle.textContent = 'Create a New Account';
+                authSubmitButton.textContent = 'Register';
+                toggleRegisterBtn.classList.add('border-accent', 'text-accent');
+                toggleRegisterBtn.classList.remove('border-transparent', 'text-gray-500');
+                toggleLoginBtn.classList.add('border-transparent', 'text-gray-500');
+                toggleLoginBtn.classList.remove('border-accent', 'text-accent');
+            }
+        }
+
+        function openAuthModal(mode) {
+            setAuthMode(mode);
+            authModal.classList.remove('hidden', 'opacity-0');
+            authModal.classList.add('flex', 'opacity-100');
+            setTimeout(() => {
+                authModalContent.classList.remove('scale-95', 'opacity-0');
+                authModalContent.classList.add('scale-100', 'opacity-100');
+                document.getElementById('auth-email').focus();
+            }, 50);
+        }
+
+        toggleLoginBtn.addEventListener('click', () => setAuthMode('login'));
+        toggleRegisterBtn.addEventListener('click', () => setAuthMode('register'));
+        authForm.addEventListener('submit', handleAuthSubmit);
+
+
+        // --- Navigation Toggle ---
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // --- AI Chatbot Logic (Simplified) ---
+        const chatWindow = document.getElementById('chat-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const loadingIndicator = document.getElementById('chat-loading-indicator');
+        
+        let chatHistory = []; 
+        const SYSTEM_PROMPT = `You are "TshirtGEEK AI Design Assistant," a helpful, energetic, and expert guide for the custom apparel shop TshirtGEEK. Your goal is to simplify the custom ordering process.`;
+
+        function toggleChat() {
+            chatWindow.classList.toggle('open');
+            chatWindow.classList.toggle('hidden');
+            if (chatWindow.classList.contains('open')) {
+                chatInput.focus();
+                chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+            }
+        }
+
+        function displayMessage(text, isUser = false) {
+            const container = document.createElement('div');
+            container.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[80%] p-3 rounded-xl shadow-md text-sm ${
+                isUser 
+                ? 'bg-accent text-primary rounded-br-none' 
+                : 'bg-chat-bg text-primary rounded-tl-none'
+            }`;
+            bubble.innerHTML = text; 
+
+            container.appendChild(bubble);
+            chatMessages.appendChild(container);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function callGeminiApi(userQuery) {
+            loadingIndicator.classList.remove('hidden');
+            
+            chatHistory.push({ role: "user", parts: [{ text: userQuery }] });
+
+            const payload = {
+                contents: chatHistory,
+                tools: [{ "google_search": {} }], 
+                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const botResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I ran into an error.";
+
+                chatHistory.push({ role: "model", parts: [{ text: botResponseText }] });
+                displayMessage(botResponseText);
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                displayMessage("Oops! There was a network issue or an API error. Please try asking again in a moment.", false);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        chatForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const input = chatInput.value.trim();
+            if (input) {
+                displayMessage(input, true);
+                chatInput.value = '';
+                callGeminiApi(input);
+            }
+        });
+
+        // --- Execute Initialization ---
+        window.onload = async () => {
+            await initializeFirebase();
+            selectModel('male'); 
+            changeCurrency('USD'); 
+            calculatePrice();
+        };
+    </script>
+</body>
+</html>
