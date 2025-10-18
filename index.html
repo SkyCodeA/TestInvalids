@@ -966,7 +966,7 @@
         // --- API KEY CONFIGURATION ---
         // PASTE YOUR GOOGLE AI API KEY HERE
         // Get your key from https://aistudio.google.com/app/apikey
-        const GOOGLE_API_KEY = "YOUR_API_KEY_HERE";
+        const GOOGLE_API_KEY = "AIzaSyBoC-Rrrt51MDIUn4aoOvWZp5mv49Yta-E";
 
         // Chart instances storage
         let statusChart = null;
@@ -988,13 +988,13 @@
         // Model images (Updated for AI Generation)
         const models = {
             'male': { 
-                base_prompt: "A photo-realistic male model wearing a black hoodie, studio lighting, high resolution, with ",
+                base_prompt: "A high-resolution photo of a man wearing a black hoodie, studio lighting, showing the design clearly. The hoodie has ",
                 url: "https://placehold.co/400x600/1F2937/FFC300/png?text=Male+Model+Black+Hoodie", 
                 alt: "Male Model wearing a custom black hoodie mockup",
                 gender: 'male'
             },
             'female': { 
-                base_prompt: "A photo-realistic female model wearing a gold hoodie, studio lighting, high resolution, with ",
+                base_prompt: "A high-resolution photo of a woman wearing a gold hoodie, studio lighting, showing the design clearly. The hoodie has ",
                 url: "https://placehold.co/400x600/FFC300/1F2937/png?text=Female+Model+Gold+Hoodie", 
                 alt: "Female Model wearing a custom gold hoodie mockup",
                 gender: 'female'
@@ -1174,7 +1174,6 @@
 
             const userQuery = `Garment: ${garment} (Quantity: ${quantity}). User's Idea/Notes: "${notes}". Generate 3 design concepts.`;
 
-            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
@@ -1255,7 +1254,6 @@
             - Remaining Balance: ${simulatedTotal} (less the advance)
             - Current Date: ${new Date().toLocaleDateString()}`;
 
-            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
@@ -1324,6 +1322,16 @@
                 }
 
                 const result = await response.json();
+                
+                // NEW: Check for safety ratings that can cause empty predictions
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].safetyRatings) {
+                    const blockedRating = result.predictions[0].safetyRatings.find(r => r.blocked);
+                    if (blockedRating) {
+                        console.error("Image generation blocked by safety filters:", blockedRating);
+                        throw new Error(`Your prompt was blocked for safety reasons (Category: ${blockedRating.category}). Please try a less specific or different prompt.`);
+                    }
+                }
+
                 const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
 
                 if (base64Data) {
@@ -1332,7 +1340,7 @@
                     models[currentModel].url = imageUrl;
                 } else {
                     console.warn("API response was successful but contained no image data.", result);
-                    throw new Error("API response did not contain valid image data.");
+                    throw new Error("The API returned a successful response, but it did not contain an image. This might be a temporary issue or a safety block.");
                 }
 
             } catch (error) {
@@ -2101,7 +2109,6 @@
                 systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
             };
 
-            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GOOGLE_API_KEY}`;
 
             try {
@@ -2146,6 +2153,4 @@
     </script>
 </body>
 </html>
-
-
 
