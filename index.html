@@ -289,23 +289,28 @@
                         
                         <!-- 1. Model Selector -->
                         <div class="w-full md:w-1/3 space-y-4">
-                            <p class="text-lg font-medium text-gray-200">Select Your Model:</p>
-                            <div class="flex space-x-4 justify-center md:justify-start">
-                                <button id="model-male-btn" onclick="selectModel('male')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-accent text-white shadow-md hover:bg-yellow-400">
-                                    Male
-                                </button>
-                                <button id="model-female-btn" onclick="selectModel('female')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-white text-primary shadow-md hover:bg-gray-200">
-                                    Female
-                                </button>
+                            <div>
+                                <p class="text-lg font-medium text-gray-200 mb-2">1. Select Your Model:</p>
+                                <div class="flex space-x-4 justify-center md:justify-start">
+                                    <button id="model-male-btn" onclick="selectModel('male')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-accent text-white shadow-md hover:bg-yellow-400">
+                                        Male
+                                    </button>
+                                    <button id="model-female-btn" onclick="selectModel('female')" class="p-3 w-1/2 md:w-auto rounded-xl font-semibold transition duration-300 bg-white text-primary shadow-md hover:bg-gray-200">
+                                        Female
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="pt-6 border-t border-white/20 mt-6">
-                                <p class="text-gray-300 text-sm italic">
-                                    (Future Feature: Upload your own design here to see a live mockup!)
-                                </p>
-                                <a href="#quote" class="mt-4 inline-block w-full bg-white text-primary py-3 rounded-lg font-bold hover:bg-gray-100 transition">
-                                    Go to Full Design Tool
-                                </a>
+                            <!-- NEW: User Input for Design -->
+                            <div class="pt-4">
+                               <label for="design-prompt-input" class="block text-lg font-medium text-gray-200 mb-2">2. Describe Your Design:</label>
+                               <textarea id="design-prompt-input" rows="3" class="w-full bg-white/10 text-white p-3 rounded-lg border border-white/30 focus:ring-accent focus:border-accent placeholder-gray-400" placeholder="e.g., 'a golden geometric lion head logo on the chest'"></textarea>
+                            </div>
+
+                            <div class="pt-4 border-t border-white/20">
+                                <button onclick="handlePreviewGeneration()" id="generate-preview-btn" class="w-full bg-accent text-primary py-3 rounded-lg font-bold hover:bg-yellow-400 transition transform hover:scale-105 shadow-lg">
+                                    Generate Preview
+                                </button>
                             </div>
                         </div>
 
@@ -978,14 +983,14 @@
         // Model images (Updated for AI Generation)
         const models = {
             'male': { 
-                prompt: "A photo-realistic male model wearing a black hoodie with the TshirtGEEK gold logo centered on the chest, studio lighting, high resolution.",
-                url: "https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...", // Fallback/Initial Placeholder
+                base_prompt: "A photo-realistic male model wearing a black hoodie, studio lighting, high resolution, with ",
+                url: "https://placehold.co/400x600/1F2937/FFC300/png?text=Male+Model+Black+Hoodie", 
                 alt: "Male Model wearing a custom black hoodie mockup",
                 gender: 'male'
             },
             'female': { 
-                prompt: "A photo-realistic female model wearing a gold hoodie with the TshirtGEEK black logo centered on the chest, studio lighting, high resolution.",
-                url: "https://placehold.co/400x600/FFC300/1F2937/png?text=Generating...", // Fallback/Initial Placeholder
+                base_prompt: "A photo-realistic female model wearing a gold hoodie, studio lighting, high resolution, with ",
+                url: "https://placehold.co/400x600/FFC300/1F2937/png?text=Female+Model+Gold+Hoodie", 
                 alt: "Female Model wearing a custom gold hoodie mockup",
                 gender: 'female'
             }
@@ -1165,7 +1170,7 @@
             const userQuery = `Garment: ${garment} (Quantity: ${quantity}). User's Idea/Notes: "${notes}". Generate 3 design concepts.`;
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1246,7 +1251,7 @@
             - Current Date: ${new Date().toLocaleDateString()}`;
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -1278,26 +1283,20 @@
         }
 
         // --- AI Image Generation Logic ---
-        async function generateAndDisplayImage(modelType) {
-            const modelData = models[modelType];
+        async function generateAndDisplayImage(fullPrompt) {
             const display = document.getElementById('model-display');
             const loadingIndicator = document.getElementById('image-loading-indicator');
             
-            // If image is already generated (cached), skip generation
-            if (modelData.url && !modelData.url.includes('Generating')) {
-                return; 
-            }
-
             loadingIndicator.classList.remove('hidden');
+            display.src = `https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...`; // Show generating placeholder
 
             const apiKey = ""; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
             const payload = { 
-                instances: [{ prompt: modelData.prompt }], 
+                instances: [{ prompt: fullPrompt }], 
                 parameters: { 
-                    "sampleCount": 1,
-                    "outputMimeType": "image/png"
+                    "sampleCount": 1
                 } 
             };
 
@@ -1312,22 +1311,36 @@
                 const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
 
                 if (base64Data) {
-                    modelData.url = `data:image/png;base64,${base64Data}`;
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    display.src = imageUrl;
+                    // Cache the generated image URL
+                    models[currentModel].url = imageUrl;
                 } else {
                     // Handle error, use a clear error image or message
-                    modelData.url = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
-                    showModal('AI Image Error', `Could not generate the custom image for the ${modelType} model. Displaying a fallback placeholder.`, false);
+                    display.src = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
+                    showModal('AI Image Error', `Could not generate the custom image. Please try a different prompt.`, false);
                 }
 
             } catch (error) {
                 console.error("Image generation failed:", error);
-                modelData.url = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
-                showModal('AI Image Error', `Network issue prevented image generation for the ${modelType} model. Displaying a fallback placeholder.`, false);
+                display.src = `https://placehold.co/400x600/FF0000/FFFFFF/png?text=AI+Image+Failed`;
+                showModal('AI Image Error', `Network issue prevented image generation. Displaying a fallback placeholder.`, false);
             } finally {
-                // Update display to generated image or fallback
-                display.src = modelData.url;
                 loadingIndicator.classList.add('hidden');
             }
+        }
+        
+        // --- NEW: Handle Preview Generation ---
+        function handlePreviewGeneration() {
+            const userInput = document.getElementById('design-prompt-input').value;
+            if (!userInput || userInput.trim().length < 5) {
+                showModal('Design is too simple!', 'Please describe your design in a little more detail (at least 5 characters).', false);
+                return;
+            }
+            const modelData = models[currentModel];
+            const fullPrompt = modelData.base_prompt + userInput;
+            
+            generateAndDisplayImage(fullPrompt);
         }
 
 
@@ -1336,35 +1349,30 @@
             const display = document.getElementById('model-display');
             const maleBtn = document.getElementById('model-male-btn');
             const femaleBtn = document.getElementById('model-female-btn');
-            const modelData = models[modelType];
-
+            
+            if (currentModel === modelType && !document.getElementById('design-prompt-input').value) return; 
+            
             currentModel = modelType;
+            const modelData = models[currentModel];
 
             // Update button styles
-            maleBtn.classList.remove('bg-accent', 'text-white');
-            maleBtn.classList.add('bg-white', 'text-primary');
-            femaleBtn.classList.remove('bg-accent', 'text-white');
-            femaleBtn.classList.add('bg-white', 'text-primary');
+            maleBtn.classList.toggle('bg-accent', modelType === 'male');
+            maleBtn.classList.toggle('text-white', modelType === 'male');
+            maleBtn.classList.toggle('bg-white', modelType !== 'male');
+            maleBtn.classList.toggle('text-primary', modelType !== 'male');
             
-            const selectedButton = modelType === 'male' ? maleBtn : femaleBtn;
-            selectedButton.classList.replace('bg-white', 'bg-accent');
-            selectedButton.classList.replace('text-primary', 'text-white');
+            femaleBtn.classList.toggle('bg-accent', modelType === 'female');
+            femaleBtn.classList.toggle('text-white', modelType === 'female');
+            femaleBtn.classList.toggle('bg-white', modelType !== 'female');
+            femaleBtn.classList.toggle('text-primary', modelType !== 'female');
 
             display.style.opacity = '0';
             
-            // Wait for fadeout before updating image source
+            // Wait for fadeout before updating image source to the default/cached one
             setTimeout(() => {
+                display.src = modelData.url;
                 display.alt = modelData.alt;
                 display.style.opacity = '1';
-                
-                // If URL is not the placeholder, use the cached image immediately
-                if (modelData.url && !modelData.url.includes('Generating')) {
-                    display.src = modelData.url;
-                } else {
-                    // Otherwise, show the generating placeholder and start the API call
-                    display.src = "https://placehold.co/400x600/1F2937/FFC300/png?text=Generating...";
-                    generateAndDisplayImage(modelType);
-                }
             }, 300); 
         }
 
@@ -2068,7 +2076,7 @@
             };
 
             const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`; // **USING GEMINI 2.5 PRO**
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -2104,6 +2112,7 @@
         // --- Execute Initialization ---
         window.onload = async () => {
             await initializeFirebase();
+            // No image generation on load, just set the initial state
             selectModel('male'); 
             changeCurrency('USD'); 
             calculatePrice();
@@ -2111,3 +2120,4 @@
     </script>
 </body>
 </html>
+
